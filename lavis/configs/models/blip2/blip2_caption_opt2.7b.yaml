@@ -7,8 +7,8 @@ model:
   arch: caption_coco_opt2.7b
   load_finetuned: True
 
-  pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_opt2.7b.pth"
-  finetuned: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_caption_opt2.7b.pth"
+  pretrained: '/share/huaiwen_group/lipeng/pretrain_models/BLIP-2/blip2_pretrained_opt2.7b.pth' # "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_opt2.7b.pth"
+  finetuned: '/share/huaiwen_group/lipeng/pretrain_models/BLIP-2/blip2_caption_opt2.7b.pth' # "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_caption_opt2.7b.pth"
 
   # vit encoder
   image_size: 364

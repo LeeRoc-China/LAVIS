@@ -242,7 +242,7 @@ class Registry:
 
     @classmethod
     def get_processor_class(cls, name):
-        return cls.mapping["processor_name_mapping"].get(name, None)
+        return cls.mapping["processor_name_mapping"].get(name, None)  # 映射对应每一个processor类
 
     @classmethod
     def get_lr_scheduler_class(cls, name):

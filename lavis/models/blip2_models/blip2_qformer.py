@@ -11,7 +11,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from torch.cuda.amp import autocast as autocast
 from torch.nn import functional as F
-
+from lavis.infer_utils import get_similarity
 from lavis.common.registry import registry
 from lavis.models.base_model import all_gather_with_grad, concat_all_gather
 from lavis.models.blip2_models.blip2 import (
@@ -516,3 +516,6 @@ class Blip2Qformer(Blip2Base):
         k_test = task_cfg.k_test
 
         return compute_sim_matrix(model=self, data_loader=data_loader, k_test=k_test)
+
+    def get_sim(self, images, texts, k):
+        return get_similarity(self, images, texts, k)
