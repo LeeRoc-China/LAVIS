@@ -21,6 +21,8 @@ from torch import nn
 from torch.nn import CrossEntropyLoss
 import torch.nn.functional as F
 
+import contextlib
+
 from transformers.activations import ACT2FN
 from transformers.file_utils import (
     ModelOutput,
@@ -44,6 +46,7 @@ from transformers.modeling_utils import (
 )
 from transformers.utils import logging
 from transformers.models.bert.configuration_bert import BertConfig
+
 
 logger = logging.get_logger(__name__)
 
@@ -492,6 +495,18 @@ class BertEncoder(nn.Module):
             [BertLayer(config, i) for i in range(config.num_hidden_layers)]
         )
 
+        self.device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
+
+    def maybe_autocast(self, dtype=torch.float16):
+        # if on cpu, don't use autocast
+        # if on gpu, use autocast with dtype if provided, otherwise use torch.float16
+        enable_autocast = self.device != torch.device("cpu")
+
+        if enable_autocast:
+            return torch.cuda.amp.autocast(dtype=dtype)
+        else:
+            return contextlib.nullcontext()
+
     def forward(
         self,
         hidden_states,
@@ -547,16 +562,17 @@ class BertEncoder(nn.Module):
                     encoder_attention_mask,
                 )
             else:
-                layer_outputs = layer_module(
-                    hidden_states,
-                    attention_mask,
-                    layer_head_mask,
-                    encoder_hidden_states,
-                    encoder_attention_mask,
-                    past_key_value,
-                    output_attentions,
-                    query_length,
-                )
+                with self.maybe_autocast():
+                    layer_outputs = layer_module(
+                        hidden_states,
+                        attention_mask,
+                        layer_head_mask,
+                        encoder_hidden_states,
+                        encoder_attention_mask,
+                        past_key_value,
+                        output_attentions,
+                        query_length,
+                    )
 
             hidden_states = layer_outputs[0]
             if use_cache:

@@ -9,7 +9,6 @@ import torch
 import torch.nn.functional as F
 from lavis.common.registry import registry
 from lavis.models.blip2_models.blip2_qformer import Blip2Qformer
-from lavis.infer_utils import get_similarity
 
 
 @registry.register_model("blip2_image_text_matching")

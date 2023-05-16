@@ -20,6 +20,7 @@ from lavis.models.base_model import MomentumDistilationMixin, SharedQueueMixin
 from lavis.models.med import XBertEncoder
 from lavis.models.vit import VisionTransformerEncoder
 from torch import nn
+from lavis.infer_utils import get_similarity_albef
 
 
 @registry.register_model("albef_retrieval")
@@ -342,3 +343,6 @@ class AlbefRetrieval(AlbefBase, MomentumDistilationMixin, SharedQueueMixin):
         k_test = task_cfg.k_test
 
         return compute_sim_matrix(model=self, data_loader=data_loader, k_test=k_test)
+
+    def get_sim(self, images, texts, k):
+        return get_similarity_albef(self, images, texts, k)

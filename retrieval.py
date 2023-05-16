@@ -5,7 +5,7 @@
  For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
 """
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '6'
 
 import argparse
 import random
@@ -89,38 +89,32 @@ def main():
     # # datasets = task.build_datasets(cfg)
     # # model = task.build_model(cfg)
 
-    normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
-
-    transform_train = transforms.Compose([
-        transforms.RandomResizedCrop(364, scale=(0.5, 1.0),
-                                     interpolation=InterpolationMode.BICUBIC),
-        transforms.RandomHorizontalFlip(),
-        RandomAugment(2, 5, isPIL=True, augs=['Identity', 'AutoContrast', 'Brightness', 'Sharpness', 'Equalize',
-                                              'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate']),
-        transforms.ToTensor(),
-        normalize,
-    ])
+    # normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+    #
+    # transform_train = transforms.Compose([
+    #     transforms.RandomResizedCrop(224, scale=(0.5, 1.0),
+    #                                  interpolation=InterpolationMode.BICUBIC),
+    #     transforms.RandomHorizontalFlip(),
+    #     RandomAugment(2, 5, isPIL=True, augs=['Identity', 'AutoContrast', 'Brightness', 'Sharpness', 'Equalize',
+    #                                           'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate']),
+    #     transforms.ToTensor(),
+    #     normalize,
+    # ])
 
 
     images_root = '/sda/home/lipeng/Program/BLIP/data/datasets/test/test_images'
     texts_root = '/sda/home/lipeng/Program/BLIP/data/datasets/test/test_text.txt'
 
-    model, vis_processors, text_processors = load_model_and_preprocess("blip2_image_text_matching", "coco",
+    name = "pretrain_vitL"#"coco"#"flickr" # "pretrain_vitL"
+    model_name = "blip2_image_text_matching"#"albef_retrieval"#"blip2_image_text_matching"
+    print(model_name, name)
+    model, vis_processors, text_processors = load_model_and_preprocess(model_name, name,
                                                                        device=device, is_eval=True)
 
-    images, texts, idx_dic = get_images_texts(images_root, texts_root, transform_train)
+    images, texts, idx_dic = get_images_texts(images_root, texts_root, vis_processors)
     sim_matrix = model.get_sim(zip(images, idx_dic.keys()), texts, k=128)
-    infer(sim_matrix, idx_dic, texts, name='BLIP-2_coco')
-
-
-    # raw_image = Image.open("./docs/_static/merlion.png").convert("RGB")
-    # caption = "merlion in Singapore"
-    # img = vis_processors["eval"](raw_image).unsqueeze(0).to(device)
-    # txt = text_processors["eval"](caption)
-    # itm_output = model({"image": img, "text_input": txt}, match_head="itm")
-    # itm_scores = torch.nn.functional.softmax(itm_output, dim=1)
-    # print(f'The image and text are matched with a probability of {itm_scores[:, 1].item():.3%}')
-
+    infer(sim_matrix, idx_dic, texts, name=f'{model_name}_{name}')
+    print(model_name, name)
 
 
 

@@ -7,7 +7,9 @@
 
 import argparse
 import random
-
+from torchvision import transforms
+from torchvision.transforms.functional import InterpolationMode
+from randaugment import RandomAugment
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -67,43 +69,52 @@ def main():
     # os.environ["NCCL_BLOCKING_WAIT"] = "1"
     device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
     # set before init_distributed_mode() to ensure the same job_id shared across all ranks.
-    job_id = now()
-
-    cfg = Config(parse_args())
-
-    init_distributed_mode(cfg.run_cfg)
-
-    setup_seeds(cfg)
-
-    # set after init_distributed_mode() to only log on master.
-    setup_logger()
-
-    cfg.pretty_print()
-
-    task = tasks.setup_task(cfg)
+    # job_id = now()
+    #
+    # cfg = Config(parse_args())
+    #
+    # init_distributed_mode(cfg.run_cfg)
+    #
+    # setup_seeds(cfg)
+    #
+    # # set after init_distributed_mode() to only log on master.
+    # setup_logger()
+    #
+    # cfg.pretty_print()
+    #
+    # task = tasks.setup_task(cfg)
     # datasets = task.build_datasets(cfg)
     # model = task.build_model(cfg)
-    raw_image = Image.open("./docs/_static/merlion.png").convert("RGB")
-    caption = "merlion in Singapore"
-    model, vis_processors, text_processors = load_model_and_preprocess("blip2_opt", "caption_coco_opt2.7b", device=device, is_eval=True)
-    print(model)
+
+    normalize = transforms.Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711))
+
+    transform_train = transforms.Compose([
+        transforms.RandomResizedCrop(364, scale=(0.5, 1.0),
+                                     interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomHorizontalFlip(),
+        RandomAugment(2, 5, isPIL=True, augs=['Identity', 'AutoContrast', 'Brightness', 'Sharpness', 'Equalize',
+                                              'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate']),
+        transforms.ToTensor(),
+        normalize,
+    ])
+
+    raw_image = Image.open("/sda/home/lipeng/Program/BLIP/data/datasets/val/val_images/000055.jpg").convert("RGB")
+    caption = "A female pedestrian is someone who walks on foot, is between 18 and 60 years old, with her body back to the camera and has a shoulderbag. She is in a tee shirt with short sleeves."
+
+    model, vis_processors, text_processors = load_model_and_preprocess("blip2_image_text_matching", "coco",
+                                                                       device=device, is_eval=True)
+
     img = vis_processors["eval"](raw_image).unsqueeze(0).to(device)
-    txt = text_processors["eval"](caption).split(' ')
-    # output = model.generate({"image": img})
-    itm_output = model({"image": img, "text_input": txt})
-    # runner = RunnerBase(
-    #     cfg=cfg, job_id=job_id, task=task, model=model, datasets=datasets
-    # )
-    # runner.evaluate(skip_reload=True)
-    # model.to(device)
-    # url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-    # image = Image.open(requests.get(url, stream=True).raw)
-    #
-    # inputs = processor(images=image, return_tensors="pt").to(device, torch.float16)
-    #
-    # generated_ids = model.generate(**inputs)
-    # generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-    # print(generated_text)
+    txt = text_processors["eval"](caption)
+    # img = transform_train(raw_image).unsqueeze(0).to(device)
+    itm_output = model({"image": img, "text_input": txt}, match_head="itm")
+    itm_scores = torch.nn.functional.softmax(itm_output, dim=1)
+    print(f'The image and text are matched with a probability of {itm_scores[:, 1].item():.3%}')
+    # pretrain: The image and text are matched with a probability of 87.037%
+    # coco: The image and text are matched with a probability of 80.385%
+    # pretrain with blip transform-train: The image and text are matched with a probability of 47.076%
+    # pretrain with blip transform-train: The image and text are matched with a probability of 63.823%
+
 
 if __name__ == "__main__":
     main()
